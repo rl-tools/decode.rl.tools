@@ -1,0 +1,129 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Type Hierarchy Viewer</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            line-height: 1.6;
+            padding: 20px;
+            max-width: 800px;
+            margin: 0 auto;
+        }
+        .spoiler {
+            border: 1px solid #ccc;
+            margin: 5px 0;
+            padding: 5px;
+        }
+        .spoiler-toggle {
+            cursor: pointer;
+            user-select: none;
+        }
+        .spoiler-toggle::before {
+            content: '▶ ';
+        }
+        .spoiler-toggle.open::before {
+            content: '▼ ';
+        }
+        .spoiler-content {
+            display: none;
+            margin-left: 20px;
+        }
+        #input {
+            width: 100%;
+            height: 100px;
+        }
+    </style>
+</head>
+<body>
+    <h1>Type Hierarchy Viewer</h1>
+    <textarea id="input" placeholder="Paste your type here..."></textarea>
+    <button onclick="parseAndDisplay()">Parse and Display</button>
+    <div id="output"></div>
+
+    <script>
+        function parseType(type) {
+            let result = { name: '', args: [] };
+            let depth = 0;
+            let current = '';
+            let inArg = false;
+
+            for (let char of type) {
+                if (char === '<') {
+                    if (depth === 0) {
+                        result.name = current.trim();
+                        current = '';
+                        inArg = true;
+                    } else {
+                        current += char;
+                    }
+                    depth++;
+                } else if (char === '>') {
+                    depth--;
+                    if (depth === 0) {
+                        if (current.trim()) {
+                            result.args.push(parseType(current.trim()));
+                        }
+                        inArg = false;
+                        current = '';
+                    } else {
+                        current += char;
+                    }
+                } else if (char === ',' && depth === 1) {
+                    if (current.trim()) {
+                        result.args.push(parseType(current.trim()));
+                    }
+                    current = '';
+                } else {
+                    current += char;
+                }
+            }
+
+            if (!inArg && current.trim()) {
+                result.name = current.trim();
+            }
+
+            return result;
+        }
+
+        function createSpoiler(content) {
+            const spoiler = document.createElement('div');
+            spoiler.className = 'spoiler';
+
+            const toggle = document.createElement('span');
+            toggle.className = 'spoiler-toggle';
+            toggle.textContent = content.name;
+            toggle.onclick = function() {
+                this.classList.toggle('open');
+                this.nextElementSibling.style.display = this.classList.contains('open') ? 'block' : 'none';
+            };
+
+            const spoilerContent = document.createElement('div');
+            spoilerContent.className = 'spoiler-content';
+
+            if (content.args.length > 0) {
+                content.args.forEach(arg => {
+                    spoilerContent.appendChild(createSpoiler(arg));
+                });
+            } else {
+                spoilerContent.textContent = 'No arguments';
+            }
+
+            spoiler.appendChild(toggle);
+            spoiler.appendChild(spoilerContent);
+
+            return spoiler;
+        }
+
+        function parseAndDisplay() {
+            const input = document.getElementById('input').value;
+            const parsed = parseType(input);
+            const output = document.getElementById('output');
+            output.innerHTML = '';
+            output.appendChild(createSpoiler(parsed));
+        }
+    </script>
+</body>
+</html>
